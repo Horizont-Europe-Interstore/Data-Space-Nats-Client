@@ -1,4 +1,4 @@
-# NatsPlugin
+# Nats Client for Energy Data Space Framework
 
 ## Getting started
 
@@ -14,7 +14,7 @@ This project's aim is giving the possibility to receive message using NATS, by d
 There are three components.
 
 ### Publisher
-This component is intended only for testing purpose and could be disabled if you don't need it. If you don't have a real source of data and you want to test the plugin you can simply enable it in the env file, if it is enabled sends data into two topics (firstTopic and secondTopics) fake data.
+This component is intended only for testing purpose and could be disabled if you don't need it. If you don't have a real source of data and you want to test the NATS Client you can simply enable it in the env file, if it is enabled sends data into two topics (firstTopic and secondTopics) fake data.
 ### NATS
 Just a NATS server used in pub/sub modality without JetStream. This means that unread message are lost forever. For further information have a look to https://docs.nats.io/ .
 
