@@ -1,0 +1,41 @@
+name: energy-data-space-nats-v1-0-0
+services:
+  middleware:
+    image: interstore/data-space-nats-subscriber:latest
+    # build:
+    #   context: ./
+    #   dockerfile: Dockerfile
+    container_name: nats-subscriber
+    restart: unless-stopped
+    ports:
+      - 5030:5030
+    env_file:
+      - .env
+    networks:
+      - NATSNetwork
+
+  
+  nats:
+    image: nats:latest  
+    container_name: nats-server
+    ports:
+      - "4222:4222"  
+    networks:
+      - NATSNetwork
+  
+  publisher:
+    image: interstore/data-space-nats-publisher:latest 
+    # build:
+    #   context: ./Publisher
+    #   dockerfile: Dockerfile
+    container_name: nats-publisher
+    ports:
+      - "5031:5031"  
+    networks:
+      - NATSNetwork
+    env_file:
+      - .env
+
+networks:
+  NATSNetwork:
+    driver: bridge
