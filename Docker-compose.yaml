@@ -2,9 +2,9 @@ name: energy-data-space-nats-v1-0-0
 services:
   middleware:
     image: interstore/data-space-nats-subscriber:latest
-    # build:
-    #   context: ./
-    #   dockerfile: Dockerfile
+    #build:
+    #  context: ./
+    #  dockerfile: Dockerfile
     container_name: nats-subscriber
     restart: unless-stopped
     ports:
@@ -35,6 +35,18 @@ services:
       - NATSNetwork
     env_file:
       - .env
+
+  nui:
+    image: ghcr.io/nats-nui/nui:latest
+    container_name: nats-ui
+    volumes:
+      - ./db:/db
+    ports:
+      - "31311:31311" 
+    depends_on:
+      - nats
+    networks:
+      - NATSNetwork
 
 networks:
   NATSNetwork:

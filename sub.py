@@ -67,13 +67,13 @@ async def fetch_service_data(isFirstIteration):
             if (topic):
                 if topic not in topics:
                     topics[topic]=[]
-                
+
                 if element["cf_type"]== "push" :
-                    
+
                     code =  element ["category_code"]
                 else:
                     code = element ["cf_code_3"]
-                
+
                 id= element["cf_id"]
                 if element["cf_updating_frequency"]:
                     updatingFrequency = element["cf_updating_frequency"]
@@ -86,9 +86,9 @@ async def fetch_service_data(isFirstIteration):
                     "updatingFrequency":updatingFrequency
                 }
                 topics[topic].append(topicInfo)
-        
+
         logging.info(topics)
-        
+
         if isFirstIteration:
             isFirstIteration = False
             return topics
@@ -99,7 +99,7 @@ def saveData(data, subject, targetServiceId,targetServiceCode, frequency ):
     global Token
     dataBase64 = base64.b64encode(data)
     dataBase64Str = dataBase64.decode('utf-8')
-    
+
     jsonData = { 
         "title": subject.split(".")[1],
         "description": f"Data automatically uploaded from the NATS server, the file contains the data acquired in {frequency} seconds",
@@ -117,7 +117,20 @@ def saveData(data, subject, targetServiceId,targetServiceCode, frequency ):
         if response.status_code!=200:
             logging.info(f"Error while saving into connector, error: {response.status_code}")
     return response.status_code
-        
+
+
+def save(buildedMessages,repeatedTopicsUnderTopic):
+    if time.time() -  buildedMessages[repeatedTopicsUnderTopic["id"]][1]  >= repeatedTopicsUnderTopic["updatingFrequency"] and buildedMessages[repeatedTopicsUnderTopic["id"]][0]: 
+
+        result = saveData(buildedMessages[repeatedTopicsUnderTopic["id"]][0], buildedMessages[repeatedTopicsUnderTopic["id"]][2], repeatedTopicsUnderTopic["id"], repeatedTopicsUnderTopic["code"],repeatedTopicsUnderTopic["updatingFrequency"]) ## target service parameters
+        if result == 200:
+            logging.info ("Data have been saved into connector")
+            buildedMessages[repeatedTopicsUnderTopic["id"]][0] = bytearray(b'') ## Reset the string
+            buildedMessages[repeatedTopicsUnderTopic["id"]][1] = time.time() ## Reset the timer
+        else:
+            logging.info("Some error occurred while saving data into connector" + str(result))
+
+
 async def main():
     global topics
     """ async def error_cb(e):
@@ -136,13 +149,11 @@ async def main():
     for topic in topics.keys(): ## keys are topic's names
         for repeatedTopicsUnderTopic in topics[topic]:
             buildedMessages[repeatedTopicsUnderTopic["id"]]= [bytearray(b''), currentTime,""]
-                                     
+
     while True:
         msg=""
         try:
             msg=await sub.next_msg(timeout=0.2)
-            if msg.data == "":
-                continue
             logging.info(f"Subscriber has received this message: {msg.data} By this topic: {msg.subject}")
             """ print(msg.data)
             print("By this topic:")
@@ -154,22 +165,15 @@ async def main():
                     # Initilize value for service if not present..
                     if repeatedTopicsUnderTopic["id"] not in buildedMessages:
                         buildedMessages[repeatedTopicsUnderTopic["id"]]=[bytearray(b''), time.time(),""]
-                    
+
                     buildedMessages[repeatedTopicsUnderTopic["id"]][0] += msg.data
                     buildedMessages[repeatedTopicsUnderTopic["id"]][0] +=b"\n"
                     buildedMessages[repeatedTopicsUnderTopic["id"]][2] = msg.subject
                     #logging.debug(buildedMessages[repeatedTopicsUnderTopic["id"]])
-                    if time.time() -  buildedMessages[repeatedTopicsUnderTopic["id"]][1]  >= repeatedTopicsUnderTopic["updatingFrequency"] and buildedMessages[repeatedTopicsUnderTopic["id"]][0]: 
-                      
-                        result = saveData(buildedMessages[repeatedTopicsUnderTopic["id"]][0], buildedMessages[repeatedTopicsUnderTopic["id"]][2], repeatedTopicsUnderTopic["id"], repeatedTopicsUnderTopic["code"],repeatedTopicsUnderTopic["updatingFrequency"]) ## target service parameters
-                        if result == 200:
-                            logging.info ("Data have been saved into connector")
-                            buildedMessages[repeatedTopicsUnderTopic["id"]][0] = bytearray(b'') ## Reset the string
-                            buildedMessages[repeatedTopicsUnderTopic["id"]][1] = time.time() ## Reset the timer
-                        else:
-                            logging.info("Some error occurred while saving data into connector" + str(result)) 
-                
+                    save(buildedMessages,repeatedTopicsUnderTopic)
+
         except TimeoutError:
+            save(buildedMessages,repeatedTopicsUnderTopic)
             pass
 
 if __name__ == '__main__':
